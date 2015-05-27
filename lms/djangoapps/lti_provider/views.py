@@ -10,10 +10,7 @@ from django.http import HttpResponseBadRequest, HttpResponseForbidden, Http404
 from django.views.decorators.csrf import csrf_exempt
 import logging
 
-from courseware.access import has_access
-from courseware.courses import get_course_with_access
-from courseware.module_render import get_module_by_usage_id
-from edxmako.shortcuts import render_to_response
+from courseware.views import render_xblock
 from lti_provider.signature_validator import SignatureValidator
 from lms_xblock.runtime import unquote_slashes
 from opaque_keys.edx.keys import CourseKey, UsageKey
@@ -118,7 +115,8 @@ def lti_run(request):
     # Remove the parameters from the session to prevent replay
     del request.session[LTI_SESSION_KEY]
 
-    return render_courseware(request, params)
+    # return an HttpResponse object that contains the template and necessary context to render the courseware.
+    return render_xblock(request, unicode(params['usage_key']))
 
 
 def get_required_parameters(dictionary, additional_params=None):
@@ -158,44 +156,6 @@ def restore_params_from_session(request):
     session_params = request.session[LTI_SESSION_KEY]
     additional_params = ['course_key', 'usage_key']
     return get_required_parameters(session_params, additional_params)
-
-
-def render_courseware(request, lti_params):
-    """
-    Render the content requested for the LTI launch.
-    TODO: This method depends on the current refactoring work on the
-    courseware/courseware.html template. It's signature may change depending on
-    the requirements for that template once the refactoring is complete.
-
-    :return: an HttpResponse object that contains the template and necessary
-    context to render the courseware.
-    """
-    usage_key = lti_params['usage_key']
-    course_key = lti_params['course_key']
-    user = request.user
-    course = get_course_with_access(user, 'load', course_key)
-    staff = has_access(request.user, 'staff', course)
-    instance, _dummy = get_module_by_usage_id(
-        request,
-        unicode(course_key),
-        unicode(usage_key)
-    )
-
-    fragment = instance.render('student_view', context=request.GET)
-
-    context = {
-        'fragment': fragment,
-        'course': course,
-        'disable_accordion': True,
-        'allow_iframing': True,
-        'disable_header': True,
-        'disable_footer': True,
-        'disable_tabs': True,
-        'staff_access': staff,
-        'xqa_server': settings.FEATURES.get('XQA_SERVER', 'http://example.com/xqa'),
-    }
-
-    return render_to_response('courseware/courseware.html', context)
 
 
 def parse_course_and_usage_keys(course_id, usage_id):

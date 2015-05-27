@@ -39,7 +39,7 @@ from courseware.courses import (
 )
 from courseware.masquerade import setup_masquerade
 from courseware.model_data import FieldDataCache
-from .module_render import toc_for_course, get_module_for_descriptor, get_module
+from .module_render import toc_for_course, get_module_for_descriptor, get_module, get_module_by_usage_id
 from .entrance_exams import (
     course_has_entrance_exam,
     get_entrance_exam_content,
@@ -1339,7 +1339,8 @@ def generate_user_cert(request, course_id):
 
 
 def _track_successful_certificate_generation(user_id, course_id):  # pylint: disable=invalid-name
-    """Track an successfully certificate generation event.
+    """
+    Track a successful certificate generation event.
 
     Arguments:
         user_id (str): The ID of the user generting the certificate.
@@ -1365,3 +1366,38 @@ def _track_successful_certificate_generation(user_id, course_id):  # pylint: dis
                 }
             }
         )
+
+
+@require_GET
+def render_xblock(request, usage_key_string):
+    """
+    Returns an HttpResponse with HTML content for the xBlock with the given usage_key.
+    The returned HTML is a chromeless rendering of the xBlock (excluding content of the containing courseware).
+    """
+    usage_key = UsageKey.from_string(usage_key_string)
+    usage_key = usage_key.replace(course_key=modulestore().fill_in_run(usage_key.course_key))
+    course_key = usage_key.course_key
+
+    # verify the user has access to the course, including enrollment check
+    from courseware.courses import get_course_with_access
+    course = get_course_with_access(request.user, 'load', course_key, check_enrollment=True)
+
+    # get the block
+    block, _ = get_module_by_usage_id(request, unicode(course_key), unicode(usage_key))
+
+    # verify the user has access to the block
+    if not has_access(request.user, 'load', block, course_key=course_key):
+        raise Http404("Module not found.")
+
+    context = {
+        'fragment': block.render('student_view', context=request.GET),
+        'course': course,
+        'disable_accordion': True,
+        'allow_iframing': True,
+        'disable_header': True,
+        'disable_footer': True,
+        'disable_tabs': True,
+        'staff_access': has_access(request.user, 'staff', course),
+        'xqa_server': settings.FEATURES.get('XQA_SERVER', 'http://your_xqa_server.com'),
+    }
+    return render_to_response('courseware/courseware.html', context)

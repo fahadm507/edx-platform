@@ -1088,3 +1088,29 @@ class TestIndexView(ModuleStoreTestCase):
         # Trigger the assertions embedded in the ViewCheckerBlocks
         response = views.index(request, unicode(course.id), chapter=chapter.url_name, section=section.url_name)
         self.assertEquals(response.content.count("ViewCheckerPassed"), 3)
+
+
+class TestRenderXBlock(ModuleStoreTestCase):
+    """
+    Tests for the courseware.render_xblock view.
+    TODO:
+      Failures:
+        not authenticated
+        student, not enrolled
+        student, no access to block
+          cohort
+          release date
+          visible_to_staff_only flag
+      Success:
+        staff, not enrolled
+        student, enrolled
+    """
+    def setup(self):
+        super(TestRenderXBlock, self).setUp()
+        self.course = CourseFactory.create()
+        chapter = ItemFactory.create(parent=self.course, category='chapter')
+        ItemFactory.create(
+            parent=chapter,
+            category='html',
+            data="<p>Test HTML Content<p>"
+        )

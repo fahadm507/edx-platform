@@ -25,6 +25,7 @@ from django.core.urlresolvers import reverse
 from django.http import Http404, HttpResponse
 from django.test.client import RequestFactory
 from django.views.decorators.csrf import csrf_exempt
+from edxmako.shortcuts import render_to_response
 
 import newrelic.agent
 
@@ -46,11 +47,10 @@ from psychometrics.psychoanalyze import make_psychometrics_data_update_handler
 from student.models import anonymous_id_for_user, user_by_anonymous_id
 from student.roles import CourseBetaTesterRole
 from xblock.core import XBlock
-from xblock.fields import Scope
-from xblock.runtime import KvsFieldData, KeyValueStore
 from xblock.exceptions import NoSuchHandlerError, NoSuchViewError
 from xblock.django.request import django_to_webob_request, webob_to_django_response
 from xmodule.error_module import ErrorDescriptor, NonStaffErrorDescriptor
+from xblock.runtime import KvsFieldData
 from xmodule.exceptions import NotFoundError, ProcessingError
 from opaque_keys.edx.keys import UsageKey, CourseKey
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
@@ -72,7 +72,6 @@ from xblock_django.user_service import DjangoXBlockUserService
 from util.json_request import JsonResponse
 from util.sandboxing import can_execute_unsafe_code, get_python_lib_zip
 from util import milestones_helpers
-from util.module_utils import yield_dynamic_descriptor_descendents
 from verify_student.services import ReverificationService
 
 from .field_overrides import OverrideFieldData

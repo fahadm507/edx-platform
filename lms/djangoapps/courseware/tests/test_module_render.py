@@ -1643,3 +1643,87 @@ class TestFilteredChildren(ModuleStoreTestCase):
         Used to assert that sets of children are equivalent.
         """
         self.assertEquals(set(child_usage_ids), set(child.scope_ids.usage_id for child in block.get_children()))
+
+
+class RenderCoursewareTest(TestCase):
+    """
+    Tests for the render_courseware method
+    """
+
+    def setUp(self):
+        """
+        Configure mocks for all the dependencies of the render method
+        """
+        super(RenderCoursewareTest, self).setUp()
+        self.module_instance = MagicMock()
+        self.module_instance.render.return_value = "Fragment"
+        self.render_mock = self.setup_patch('lti_provider.views.render_to_response', 'Rendered page')
+        self.module_mock = self.setup_patch('lti_provider.views.get_module_by_usage_id', (self.module_instance, None))
+        self.access_mock = self.setup_patch('lti_provider.views.has_access', 'StaffAccess')
+        self.course_mock = self.setup_patch('lti_provider.views.get_course_with_access', 'CourseWithAccess')
+
+    def setup_patch(self, function_name, return_value):
+        """
+        Patch a method with a given return value, and return the mock
+        """
+        mock = MagicMock(return_value=return_value)
+        new_patch = patch(function_name, new=mock)
+        new_patch.start()
+        self.addCleanup(new_patch.stop)
+        return mock
+
+    def test_valid_launch(self):
+        """
+        Verify that the method renders a response when launched correctly
+        """
+        request = build_run_request()
+        response = views.render_courseware(request, ALL_PARAMS.copy())
+        self.assertEqual(response, 'Rendered page')
+
+    def test_course_with_access(self):
+        """
+        Verify that get_course_with_access is called with the right parameters
+        """
+        request = build_run_request()
+        views.render_courseware(request, ALL_PARAMS.copy())
+        self.course_mock.assert_called_with(request.user, 'load', COURSE_KEY, check_enrollment=True)
+
+    def test_has_access(self):
+        """
+        Verify that has_access is called with the right parameters
+        """
+        request = build_run_request()
+        views.render_courseware(request, ALL_PARAMS.copy())
+        self.access_mock.assert_called_with(request.user, 'staff', 'CourseWithAccess')
+
+    def test_get_module(self):
+        """
+        Verify that get_module_by_usage_id is called with the right parameters
+        """
+        request = build_run_request()
+        views.render_courseware(request, ALL_PARAMS.copy())
+        self.module_mock.assert_called_with(request, unicode(COURSE_KEY), unicode(USAGE_KEY))
+
+    def test_render(self):
+        """
+        Verify that render is called on the right object with the right parameters
+        """
+        request = build_run_request()
+        views.render_courseware(request, ALL_PARAMS.copy())
+        self.module_instance.render.assert_called_with('student_view', context={})
+
+    def test_context(self):
+        expected_context = {
+            'fragment': 'Fragment',
+            'course': 'CourseWithAccess',
+            'disable_accordion': True,
+            'allow_iframing': True,
+            'disable_header': True,
+            'disable_footer': True,
+            'disable_tabs': True,
+            'staff_access': 'StaffAccess',
+            'xqa_server': 'http://example.com/xqa',
+        }
+        request = build_run_request()
+        views.render_courseware(request, ALL_PARAMS.copy())
+        self.render_mock.assert_called_with('courseware/courseware.html', expected_context)
