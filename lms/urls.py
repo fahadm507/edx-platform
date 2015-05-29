@@ -427,11 +427,13 @@ if settings.COURSEWARE_ENABLED:
         # Student Notes
         url(r'^courses/{}/edxnotes'.format(settings.COURSE_ID_PATTERN),
             include('edxnotes.urls'), name="edxnotes_endpoints"),
-
-        # Teams endpoints
-        url(r'^courses/{}/teams'.format(settings.COURSE_ID_PATTERN),
-            include('teams.urls'), name="teams_endpoints"),
     )
+
+    if settings.FEATURES["ENABLE_TEAMS"]:
+        # Teams endpoints
+        urlpatterns += (
+            url(r'^courses/{}/teams'.format(settings.COURSE_ID_PATTERN), include('teams.urls'), name="teams_endpoints"),
+        )
 
     # allow course staff to change to student view of courseware
     if settings.FEATURES.get('ENABLE_MASQUERADE'):

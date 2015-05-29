@@ -22,7 +22,6 @@ class TeamsCourseViewType(EnrolledCourseViewType):
 
         Args:
             course (CourseDescriptor): the course using the feature
-            settings (dict): a dict of configuration settings
             user (User): the user interacting with the course
         """
         if not super(TeamsCourseViewType, cls).is_enabled(course, user=user):

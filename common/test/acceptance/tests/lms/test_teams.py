@@ -1,3 +1,6 @@
+"""
+Acceptance tests for the teams feature.
+"""
 from ..helpers import UniqueCourseTest
 from ...pages.lms.teams import TeamsPage
 from nose.plugins.attrib import attr
@@ -18,11 +21,13 @@ class TeamsTabTest(UniqueCourseTest):
         self.tab_nav = TabNavPage(self.browser)
         self.course_info_page = CourseInfoPage(self.browser, self.course_id)
         self.teams_page = TeamsPage(self.browser, self.course_id)
+        self.test_topic = {u"name": u"a topic", u"description": u"test topic", u"id": 0}
 
     def set_team_configuration(self, configuration, enroll_in_course=True, global_staff=False):
         """
         Sets team configuration on the course and calls auto-auth on the user.
         """
+        #pylint: disable=attribute-defined-outside-init
         self.course_fixture = CourseFixture(**self.course_info)
         if configuration:
             self.course_fixture.add_advanced_settings(
@@ -74,7 +79,7 @@ class TeamsTabTest(UniqueCourseTest):
         When I view the course info page
         Then I should not see the Teams tab
         """
-        self.set_team_configuration({u"max_team_size": 10, u"topics": [u"a topic"]}, False)
+        self.set_team_configuration({u"max_team_size": 10, u"topics": [self.test_topic]}, enroll_in_course=False)
         self.verify_teams_present(False)
 
     def test_teams_enabled(self):
@@ -85,7 +90,7 @@ class TeamsTabTest(UniqueCourseTest):
         Then I should see the Teams tab
         And the correct content should be on the page
         """
-        self.set_team_configuration({u"max_team_size": 10, u"topics": [u"a topic"]})
+        self.set_team_configuration({u"max_team_size": 10, u"topics": [self.test_topic]})
         self.verify_teams_present(True)
 
     def test_teams_enabled_global_staff(self):
@@ -97,5 +102,7 @@ class TeamsTabTest(UniqueCourseTest):
         Then I should see the Teams tab
         And the correct content should be on the page
         """
-        self.set_team_configuration({u"max_team_size": 10, u"topics": [u"a topic"]}, False, True)
+        self.set_team_configuration(
+            {u"max_team_size": 10, u"topics": [self.test_topic]}, enroll_in_course=False, global_staff=True
+        )
         self.verify_teams_present(True)
