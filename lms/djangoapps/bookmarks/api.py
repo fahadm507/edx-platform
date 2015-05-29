@@ -1,7 +1,7 @@
 """
 Bookmarks Python API.
 """
-
+from eventtracking import tracker
 from . import DEFAULT_FIELDS, OPTIONAL_FIELDS
 from .models import Bookmark
 from .serializers import BookmarkSerializer
@@ -72,6 +72,7 @@ def create_bookmark(user, usage_key):
         'user': user,
         'usage_key': usage_key
     })
+    _track_bookmark_event('edx.course.bookmark.added', user.username, usage_key)
     return BookmarkSerializer(bookmark, context={'fields': DEFAULT_FIELDS + OPTIONAL_FIELDS}).data
 
 
@@ -90,4 +91,23 @@ def delete_bookmark(user, usage_key):
         ObjectDoesNotExist: If a bookmark with the parameters does not exist.
     """
     bookmark = Bookmark.objects.get(user=user, usage_key=usage_key)
+    _track_bookmark_event('edx.course.bookmark.added', user.username, usage_key)
     bookmark.delete()
+
+
+def _track_bookmark_event(event_name, username, usage_key):
+    """
+    Track bookmark create/delete requests
+
+    Arguments:
+        username: username of requested user
+        usage_key: usage key of the XBlock
+    """
+    tracker.emit(
+        event_name,
+        {
+            'bookmark_id': '{},{}'.format(username, unicode(usage_key)),
+            'component_type': usage_key.block_type,
+            'component_usage_id': unicode(usage_key),
+        }
+    )

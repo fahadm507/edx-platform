@@ -1,7 +1,7 @@
 ;(function (define, undefined) {
     'use strict';
-    define(['gettext', 'jquery', 'underscore', 'backbone', 'moment'],
-        function (gettext, $, _, Backbone, _moment) {
+    define(['gettext', 'jquery', 'underscore', 'backbone', 'logger', 'moment'],
+        function (gettext, $, _, Backbone, Logger, _moment) {
 
         var moment = _moment || window.moment;
 
@@ -60,7 +60,17 @@
             },
 
             visitBookmark: function (event) {
-                window.location = event.target.pathname;
+                var bookmark_id = event.currentTarget.dataset.id;
+                var component_usage_id = bookmark_id.split(',')[1];
+                Logger.log(
+                    'edx.course.bookmark.accessed',
+                    {
+                       bookmark_id: bookmark_id,
+                       component_type: 'vertical',
+                       component_usage_id: component_usage_id,
+                    }
+                );
+                window.location = event.currentTarget.pathname;
             },
 
             /**
