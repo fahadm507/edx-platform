@@ -8,6 +8,8 @@ from django.core.urlresolvers import reverse
 from rest_framework.test import APIClient
 
 from student.tests.factories import UserFactory
+from util.testing import EventTestMixin
+
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
 
@@ -16,7 +18,26 @@ from .factories import BookmarkFactory
 # pylint: disable=no-member
 
 
-class BookmarksViewTestsMixin(ModuleStoreTestCase):
+class BookmarkViewsEventTestMixin(EventTestMixin):
+    """
+    Mixin for verifying that bookmark api events were emitted during a test.
+    """
+    def setUp(self):
+        super(BookmarkViewsEventTestMixin, self).setUp('lms.djangoapps.bookmarks.views.tracker')
+
+    def verify_bookmark_listed_event_emitted(self, bookmarks_count, page_size, page_number):
+        """
+        Helper method to assert that `edx.course.bookmark.listed` event is emitted with correct data.
+        """
+        self.assert_event_emitted(
+            'edx.course.bookmark.listed',
+            bookmarks_count=bookmarks_count,
+            page_size=page_size,
+            page_number=page_number,
+        )
+
+
+class BookmarksViewTestsMixin(BookmarkViewsEventTestMixin, ModuleStoreTestCase):
     """
     Mixin for bookmarks views tests.
     """
@@ -29,6 +50,8 @@ class BookmarksViewTestsMixin(ModuleStoreTestCase):
         self.user = UserFactory.create(password=self.test_password)
         self.create_test_data()
         self.client = self.login_client(user=self.user)
+
+        self.reset_tracker()
 
     def login_client(self, user):
         """
@@ -167,6 +190,8 @@ class BookmarksListViewTests(BookmarksViewTestsMixin):
         # As bookmarks are sorted by -created so we will compare in that order.
         self.assert_valid_bookmark_response(bookmarks[0], self.bookmark_2, optional_fields=check_optionals)
         self.assert_valid_bookmark_response(bookmarks[1], self.bookmark_1, optional_fields=check_optionals)
+
+        self.verify_bookmark_listed_event_emitted(2, 10, 1)
 
     def test_get_bookmarks_with_pagination(self):
         """

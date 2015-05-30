@@ -44,6 +44,10 @@ class BookmarksTestMixin(EventsTestMixin, UniqueCourseTest):
             ]
         self.course_fixture.add_children(*xblocks).install()
 
+    def verify_event_data(self, event_type, event_data):
+        actual_events = self.wait_for_events(event_filter={'event_type': event_type}, number_of_matches=1)
+        self.assert_events_match(event_data, actual_events)
+
 
 class BookmarksTest(BookmarksTestMixin):
     """
@@ -289,3 +293,32 @@ class BookmarksTest(BookmarksTestMixin):
         self.bookmarks.click_bookmarks_button()
         self.assertTrue(self.bookmarks.results_present())
         self.assertEqual(self.bookmarks.count(), 11)
+
+    def test_bookmarked_unit_accesed_event(self):
+        """
+        Scenario: Bookmark events are emitted with correct data when we access/visit a bookmarked unit.
+
+        Given that I am a registered user
+        And I visit my courseware page
+        And I have bookmarked a unit
+        When I click on bookmarked unit
+        Then `edx.course.bookmark.accessed` event is emitted
+        """
+        self._test_setup(1)
+        self.reset_event_tracking()
+
+        # create expected event data
+        xblocks = self.course_fixture.get_nested_xblocks(category="vertical")
+        event_data = [
+            {
+                'event': {
+                    'bookmark_id': '{},{}'.format(self.USERNAME, xblocks[0].locator),
+                    'component_type': xblocks[0].category,
+                    'component_usage_id': xblocks[0].locator,
+                }
+            }
+        ]
+        self.bookmark_single_unit(0)
+        self.bookmarks.click_bookmarks_button()
+        self.bookmarks.click_bookmarked_unit(0)
+        self.verify_event_data('edx.course.bookmark.accessed', event_data)

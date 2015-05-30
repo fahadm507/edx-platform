@@ -67,7 +67,7 @@
                     {
                        bookmark_id: bookmark_id,
                        component_type: 'vertical',
-                       component_usage_id: component_usage_id,
+                       component_usage_id: component_usage_id
                     }
                 );
                 window.location = event.currentTarget.pathname;
